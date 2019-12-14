@@ -1,11 +1,23 @@
-import com.fazecast.jSerialComm.SerialPort;
+package Gate;
 
-import java.io.IOException;
+import com.fazecast.jSerialComm.SerialPort;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+
 import java.util.Scanner;
 
-
-public class Main {
-    public static void main(String[] args) throws IOException {
+public class App extends Application {
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        BorderPane root = new BorderPane();
+        Scene scene = new Scene(root, 200,100);
+        TextArea text = new TextArea();
+        text.setText("Введите номер COM порта: ");
+        primaryStage.setScene(scene);
+        primaryStage.show();
         SerialPort[] ports = SerialPort.getCommPorts();
         System.out.println("Введите номер COM порта: ");
 
@@ -27,10 +39,14 @@ public class Main {
         byte[] buff = new byte[8];
         long bytes = 8;
 
-        while(comPort.isOpen()){
+        comPort.readBytes(buff, bytes);
+        while (comPort.isOpen()) {
             comPort.readBytes(buff, bytes);
             System.out.print(new String(buff));
         }
+    }
 
+    public static void main(String[] args) {
+        launch(args);
     }
 }
