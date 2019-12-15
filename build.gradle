@@ -2,22 +2,41 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.8'
 }
 
-javafx {
-    version = "13"
-    modules = [ 'javafx.controls' ]
+mainClassName = 'Gate.Main'
+sourceCompatibility = 12
+targetCompatibility = 12
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gate',
+                'Main-Class': 'Gate.Main'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
 
 group 'edu.tolgas.gate'
-version '0.0.9-SNAPSHOT'
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
+def currentOS = org.gradle.internal.os.OperatingSystem.current()
+def platform
+if (currentOS.isWindows()) {
+    platform = 'win'
+} else if (currentOS.isLinux()) {
+    platform = 'linux'
+} else if (currentOS.isMacOsX()) {
+    platform = 'mac'
+}
 dependencies {
-    implementation 'com.google.guava:guava:28.0-jre'
+    compile "org.openjfx:javafx-base:11:${platform}"
+    compile "org.openjfx:javafx-graphics:11:${platform}"
+    compile "org.openjfx:javafx-controls:11:${platform}"
+    compile "org.openjfx:javafx-fxml:11:${platform}"
+
     compile fileTree(dir: 'lib', include: ['*.jar'])
 }
