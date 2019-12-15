@@ -2,6 +2,8 @@ package Gate;
 
 import com.fazecast.jSerialComm.SerialPort;
 import javafx.application.Application;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
@@ -9,11 +11,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.util.Scanner;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 public class App extends Application {
-    int index;
-    private VBox root;
     private TextArea text;
     private TextField field;
     private Button submit;
@@ -23,27 +25,26 @@ public class App extends Application {
     private SerialPort comPort;
     private SerialPort[] ports;
 
-
     {
-        root = new VBox();
+        VBox root = new VBox();
         text = new TextArea();
         field = new TextField();
         submit = new Button("Enter");
-        text.setPrefSize(500, 400);
+        text.setPrefSize(300, 300);
         text.setText("Enter COM port number:\n");
         text.setEditable(false);
         root.getChildren().addAll(text, field, submit);
-        scene = new Scene(root, 500, 500);
+        scene = new Scene(root, 400, 350);
 
 
         submit.setOnAction(e -> {
-            buttonAction();
+            openCOMPort();
             readBytesOfCOMPort();
         });
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         primaryStage.setTitle("Gate");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -55,11 +56,11 @@ public class App extends Application {
         }
     }
 
-    private void buttonAction(){
+    private void openCOMPort() {
         field.setVisible(false);
         submit.setVisible(false);
         text.setText("");
-        index = Integer.parseInt(field.getText());
+        int index = Integer.parseInt(field.getText());
         comPort = SerialPort.getCommPort(ports[index].getSystemPortName());
 
         comPort.openPort();
@@ -67,66 +68,35 @@ public class App extends Application {
         comPort.setNumDataBits(8);
         comPort.setParity(SerialPort.NO_PARITY);
         comPort.setNumStopBits(SerialPort.ONE_STOP_BIT);
-        comPort.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_BLOCKING, 0, 0);
+
     }
 
     private void readBytesOfCOMPort() {
-        buff = new byte[13];
-        bytes = 13;
-        String tmp;
-        Scanner scanner = new Scanner(comPort.getInputStream());
-        while(comPort.isOpen()){
-            if(scanner.hasNextLine()){
-                System.out.println(scanner.nextLine());
+        buff = new byte[15];
+        bytes = 15;
+
+        Service<Void> service = new Service<>() {
+            @Override
+            protected Task<Void> createTask() {
+                return new Task<>() {
+                    @Override
+                    protected Void call() {
+                        while (comPort.isOpen()) {
+                            comPort.readBytes(buff, bytes);
+                            if (buff[0] != 0) {
+                                text.appendText("(" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + ") ");
+                                text.appendText(new String(buff));
+                                Arrays.fill(buff, (byte) 0);
+                            }
+                            text.end();
+                        }
+                        return null;
+                    }
+                };
             }
-        }
-//        comPort.readBytes(buff, bytes);
-//        while (comPort.isOpen()) {
-//            comPort.readBytes(buff, bytes);
-//            text.appendText(new String(buff));
-//        }
+        };
+        service.start();
     }
-
-//    class MainUI implements Runnable {
-//
-//        @Override
-//        public void run() {
-//
-//                ports = SerialPort.getCommPorts();
-//
-//                for (int i = 0; i < ports.length; i++) {
-//                    text.appendText(i + " >> " + ports[i].getSystemPortName() + "\n");
-//                }
-//
-//                buff = new byte[8];
-//                bytes = 8;
-////                comPort.readBytes(buff, bytes);
-////                while (comPort.isOpen()) {
-////                    comPort.readBytes(buff, bytes);
-////                    text.appendText(new String(buff));
-////                }
-//
-//        }
-//    }
-
-//    class ReadBytesOfCOMPort implements Runnable {
-//
-//        @Override
-//        public void run() {
-//            try {
-//                lock.acquire();
-//                comPort.readBytes(buff, bytes);
-//                while (comPort.isOpen()) {
-//                    comPort.readBytes(buff, bytes);
-//                    text.appendText(new String(buff));
-//                }
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
-
 
     public static void main(String[] args) {
         launch(args);
